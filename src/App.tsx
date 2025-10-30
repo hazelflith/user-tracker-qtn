@@ -40,6 +40,7 @@ function App() {
   const saleQueueRef = useRef<SaleEvent[]>([])
   const isProcessingQueueRef = useRef(false)
   const lastPlayedRef = useRef<number>(0)
+  const saleTimerRef = useRef<number | null>(null)
   const [isAudioEnabled, setAudioEnabled] = useState(false)
   const [audioError, setAudioError] = useState<string | null>(null)
   const [salesPerSecond, setSalesPerSecond] = useState(0.12)
@@ -189,6 +190,44 @@ function App() {
     setSalesPerSecond(Math.min(3, Math.max(0, value)))
   }, [])
 
+  const clearSaleTimer = useCallback(() => {
+    if (saleTimerRef.current !== null) {
+      window.clearTimeout(saleTimerRef.current)
+      saleTimerRef.current = null
+    }
+  }, [])
+
+  const generateSale = useCallback(() => {
+    let event: SaleEvent | null = null
+
+    setProducts((previous) => {
+      if (!previous.length) return previous
+
+      const productIndex = Math.floor(Math.random() * previous.length)
+      const product = previous[productIndex]
+      if (!product) return previous
+
+      const saleAmount = randomInRange(180_000, 1_450_000)
+      const updatedProducts = previous.map((entry, index) =>
+        index === productIndex ? { ...entry, revenue: entry.revenue + saleAmount, users: entry.users + 1 } : entry,
+      )
+
+      event = { productId: product.id, amount: saleAmount, timestamp: Date.now() + Math.random() }
+
+      return updatedProducts
+    })
+
+    if (!event) return
+
+    const { productId, timestamp, amount } = event
+    setPulseMap((currentMap) => ({ ...currentMap, [productId]: timestamp }))
+
+    const nextEvent: SaleEvent = { productId, amount, timestamp }
+    saleQueueRef.current.push(nextEvent)
+    setRecentSale(nextEvent)
+    setQueueVersion((value) => value + 1)
+  }, [])
+
   const flushAudioQueue = useCallback(async () => {
     if (isProcessingQueueRef.current) return
     if (!saleQueueRef.current.length) return
@@ -223,6 +262,24 @@ function App() {
     }
   }, [ensureAudioSetup, playCashSound])
 
+  const scheduleNextSale = useCallback(() => {
+    clearSaleTimer()
+
+    if (salesPerSecond <= 0) {
+      return
+    }
+
+    const randomDelayMs = Math.max(
+      120,
+      Math.round((-Math.log(1 - Math.random()) / salesPerSecond) * 1000),
+    )
+
+    saleTimerRef.current = window.setTimeout(() => {
+      generateSale()
+      scheduleNextSale()
+    }, randomDelayMs)
+  }, [clearSaleTimer, generateSale, salesPerSecond])
+
   useEffect(() => {
     if (isAudioEnabled) return
 
@@ -244,65 +301,6 @@ function App() {
     return () => window.clearInterval(ticker)
   }, [])
 
-  const generateSale = useCallback(() => {
-    let event: SaleEvent | null = null
-
-    setProducts((previous) => {
-      if (!previous.length) return previous
-
-      const productIndex = Math.floor(Math.random() * previous.length)
-      const product = previous[productIndex]
-      if (!product) return previous
-
-      const saleAmount = randomInRange(180_000, 1_450_000)
-      const updatedProducts = previous.map((entry, index) =>
-        index === productIndex ? { ...entry, revenue: entry.revenue + saleAmount, users: entry.users + 1 } : entry,
-      )
-
-      event = { productId: product.id, amount: saleAmount, timestamp: Date.now() + Math.random() }
-
-      return updatedProducts
-    })
-
-    if (!event) return
-
-    const { productId, timestamp, amount } = event
-    setPulseMap((currentMap) => ({ ...currentMap, [productId]: timestamp }))
-
-    const nextEvent: SaleEvent = { productId, amount, timestamp }
-    saleQueueRef.current.push(nextEvent)
-    setRecentSale(nextEvent)
-    setQueueVersion((value) => value + 1)
-  }, [])
-
-  useEffect(() => {
-    let rafId: number
-    let lastTime = performance.now()
-    let accumulator = 0
-
-    const tick = (time: number) => {
-      const deltaSeconds = Math.max(0, time - lastTime) / 1000
-      lastTime = time
-      accumulator += salesPerSecond * deltaSeconds
-
-      const events = Math.floor(accumulator)
-      accumulator -= events
-
-      for (let index = 0; index < events; index += 1) {
-        generateSale()
-      }
-
-      rafId = requestAnimationFrame(tick)
-    }
-
-    rafId = requestAnimationFrame((time) => {
-      lastTime = time
-      rafId = requestAnimationFrame(tick)
-    })
-
-    return () => cancelAnimationFrame(rafId)
-  }, [generateSale, salesPerSecond])
-
   useEffect(() => {
     if (!saleQueueRef.current.length) return
     void flushAudioQueue()
@@ -313,6 +311,14 @@ function App() {
     if (!saleQueueRef.current.length) return
     void flushAudioQueue()
   }, [flushAudioQueue, isAudioEnabled])
+
+  useEffect(() => {
+    scheduleNextSale()
+
+    return () => {
+      clearSaleTimer()
+    }
+  }, [clearSaleTimer, scheduleNextSale])
 
   return (
     <div className="relative flex h-screen w-screen items-stretch justify-center overflow-hidden bg-gradient-to-br from-slate-100 via-white to-slate-200 px-6 pt-8 pb-12 lg:px-10 lg:pt-12 lg:pb-16">
