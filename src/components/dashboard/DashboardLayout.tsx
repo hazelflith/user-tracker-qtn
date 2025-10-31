@@ -31,12 +31,19 @@ export function DashboardLayout({ products, pulseMap, now, recentSale }: Dashboa
     {
       src: string
       alt: string
+      className?: string
+      wrapperClassName?: string
     }
   > = {
     meepo: { src: '/MEEPO_LOGO_COLOR.png', alt: 'Meepo' },
-    kenangan: { src: '/logo-kenangan-red.svg', alt: 'Kenangan' },
-    quantumbyte: { src: '/logo_quantumbyte.png', alt: 'QuantumByte' },
-    nexius: { src: '/nexius-logo.webp', alt: 'Nexius' },
+    kenangan: { src: '/logo-kenangan-red.svg', alt: 'Kenangan', className: 'max-h-9' },
+    quantumbyte: { src: '/logo_quantumbyte.png', alt: 'QuantumByte', className: 'max-h-9' },
+    nexius: {
+      src: '/nexius-logo.webp',
+      alt: 'Nexius',
+      wrapperClassName: 'bg-slate-900',
+      className: 'max-h-8 invert brightness-[1.95]',
+    },
   }
 
   return (
@@ -51,6 +58,8 @@ export function DashboardLayout({ products, pulseMap, now, recentSale }: Dashboa
             label={labels[product.id] ?? 'Active users'}
             logoSrc={logos[product.id]?.src}
             logoAlt={logos[product.id]?.alt}
+            logoClassName={logos[product.id]?.className}
+            logoWrapperClassName={logos[product.id]?.wrapperClassName}
             accent={product.accent}
             isActive={now - (pulseMap[product.id] ?? 0) < 1200}
             isUserPulse={Boolean(

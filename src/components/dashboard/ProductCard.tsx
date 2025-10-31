@@ -16,6 +16,8 @@ export type ProductCardProps = {
   isUserPulse?: boolean
   logoSrc?: string
   logoAlt?: string
+  logoClassName?: string
+  logoWrapperClassName?: string
 }
 
 export function ProductCard({
@@ -27,6 +29,8 @@ export function ProductCard({
   isUserPulse = false,
   logoSrc,
   logoAlt,
+  logoClassName,
+  logoWrapperClassName,
 }: ProductCardProps) {
   const formattedUsers = numberFormatter.format(users)
   const previousUsersRef = useRef(users)
@@ -52,7 +56,7 @@ export function ProductCard({
   const shouldPulse = isActive || isUserPulse || hasLocalPulse
 
   return (
-    <Card className="relative flex h-full flex-col justify-center gap-6 overflow-hidden border-none bg-white/85 px-6 py-10 shadow-card ring-1 ring-white/70 backdrop-blur-xl">
+    <Card className="relative flex h-full flex-col justify-center gap-8 overflow-hidden border-none bg-white/85 px-8 py-12 shadow-card ring-1 ring-white/70 backdrop-blur-xl">
       <span
         aria-hidden
         className="absolute inset-x-0 top-0 h-1"
@@ -61,9 +65,20 @@ export function ProductCard({
         }}
       />
 
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-5">
         {logoSrc ? (
-          <img src={logoSrc} alt={logoAlt ?? name} className="h-10 w-auto object-contain" />
+          <div
+            className={cn(
+              'flex h-12 w-32 items-center justify-center rounded-xl border border-white/70 bg-white/75 shadow-inner shadow-slate-900/5',
+              logoWrapperClassName,
+            )}
+          >
+            <img
+              src={logoSrc}
+              alt={logoAlt ?? name}
+              className={cn('max-h-10 w-auto max-w-[7.5rem] object-contain', logoClassName)}
+            />
+          </div>
         ) : (
           <p className="text-sm font-semibold uppercase tracking-[0.45em] text-slate-500/80">{name}</p>
         )}
