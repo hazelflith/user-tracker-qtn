@@ -1,5 +1,3 @@
-import { Users } from 'lucide-react'
-
 import { cn } from '@/lib/utils'
 
 import { Card } from '../ui/card'
@@ -10,12 +8,13 @@ export type ProductCardProps = {
   id: string
   name: string
   users: number
+  label: string
   accent: string
   isActive: boolean
   isUserPulse?: boolean
 }
 
-export function ProductCard({ name, users, accent, isActive, isUserPulse = false }: ProductCardProps) {
+export function ProductCard({ name, users, label, accent, isActive, isUserPulse = false }: ProductCardProps) {
   const formattedUsers = numberFormatter.format(users)
 
   return (
@@ -28,17 +27,13 @@ export function ProductCard({ name, users, accent, isActive, isUserPulse = false
         }}
       />
 
-      <div className="flex items-start justify-between gap-4">
+      <div className="space-y-2">
         <p className="text-[0.7rem] font-semibold uppercase tracking-[0.45em] text-slate-500/80 md:text-xs">
           {name}
         </p>
-        <div className="flex items-center gap-1.5 rounded-full border border-white/70 bg-white/85 px-2.5 py-1 text-[0.75rem] font-medium text-slate-500 shadow-sm backdrop-blur">
-          <Users className="h-3 w-3 text-slate-400" />
-          <span>{formattedUsers}</span>
-        </div>
+        <p className="text-xs font-semibold uppercase tracking-[0.35em] text-slate-400">{label}</p>
       </div>
-      <div className="space-y-4 pt-4">
-        <p className="text-xs font-semibold uppercase tracking-[0.35em] text-slate-400">Active Users</p>
+      <div className="pt-6">
         <p
           className={cn(
             'text-5xl font-semibold tracking-tight text-slate-900 transition-all duration-300 md:text-6xl',
