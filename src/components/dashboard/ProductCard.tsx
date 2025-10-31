@@ -1,40 +1,23 @@
 import { Users } from 'lucide-react'
 
-import { useAnimatedNumber } from '@/hooks/use-animated-number'
 import { cn } from '@/lib/utils'
 
 import { Card } from '../ui/card'
-
-const currencyFormatter = new Intl.NumberFormat('id-ID', {
-  style: 'currency',
-  currency: 'IDR',
-  maximumFractionDigits: 0,
-})
 
 const numberFormatter = new Intl.NumberFormat('id-ID')
 
 export type ProductCardProps = {
   id: string
   name: string
-  revenue: number
   users: number
   target: number
   accent: string
   isActive: boolean
   lastSaleAmount?: number
+  isUserPulse?: boolean
 }
 
-export function ProductCard({
-  name,
-  revenue,
-  users,
-  target: _target,
-  accent,
-  isActive,
-  lastSaleAmount,
-}: ProductCardProps) {
-  const animatedRevenue = useAnimatedNumber(revenue)
-  const formattedRevenue = currencyFormatter.format(Math.round(animatedRevenue))
+export function ProductCard({ name, users, target: _target, accent, isActive, lastSaleAmount, isUserPulse = false }: ProductCardProps) {
   const formattedUsers = numberFormatter.format(users)
 
   return (
@@ -56,24 +39,22 @@ export function ProductCard({
           <span>{formattedUsers}</span>
         </div>
       </div>
-
-      <div className="space-y-2 pt-4">
+      <div className="space-y-4 pt-4">
+        <p className="text-xs font-semibold uppercase tracking-[0.35em] text-slate-400">Active Users</p>
         <p
           className={cn(
-            'text-3xl font-semibold tracking-tight text-slate-900 transition-all duration-300 md:text-[2.4rem]',
-            isActive && 'animate-pop text-emerald-500 drop-shadow-sm',
+            'text-5xl font-semibold tracking-tight text-slate-900 transition-all duration-300 md:text-6xl',
+            (isActive || isUserPulse) && 'animate-pop text-emerald-500 drop-shadow-sm',
           )}
         >
-          {formattedRevenue}
+          {formattedUsers}
         </p>
-        <div className="flex items-center gap-2 text-sm text-slate-500">
-          <span>Lifetime revenue</span>
-          {lastSaleAmount ? (
-            <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-semibold text-emerald-500">
-              +{currencyFormatter.format(lastSaleAmount)}
-            </span>
-          ) : null}
-        </div>
+        {lastSaleAmount ? (
+          <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.3em] text-emerald-500">
+            <span className="rounded-full bg-emerald-50 px-2 py-0.5">New user joined</span>
+            <span className="text-xs font-medium text-emerald-500/80">+{numberFormatter.format(lastSaleAmount)}</span>
+          </div>
+        ) : null}
       </div>
     </Card>
   )
