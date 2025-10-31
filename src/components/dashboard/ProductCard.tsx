@@ -10,14 +10,12 @@ export type ProductCardProps = {
   id: string
   name: string
   users: number
-  target: number
   accent: string
   isActive: boolean
-  lastSaleAmount?: number
   isUserPulse?: boolean
 }
 
-export function ProductCard({ name, users, target: _target, accent, isActive, lastSaleAmount, isUserPulse = false }: ProductCardProps) {
+export function ProductCard({ name, users, accent, isActive, isUserPulse = false }: ProductCardProps) {
   const formattedUsers = numberFormatter.format(users)
 
   return (
@@ -49,12 +47,6 @@ export function ProductCard({ name, users, target: _target, accent, isActive, la
         >
           {formattedUsers}
         </p>
-        {lastSaleAmount ? (
-          <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.3em] text-emerald-500">
-            <span className="rounded-full bg-emerald-50 px-2 py-0.5">New user joined</span>
-            <span className="text-xs font-medium text-emerald-500/80">+{numberFormatter.format(lastSaleAmount)}</span>
-          </div>
-        ) : null}
       </div>
     </Card>
   )

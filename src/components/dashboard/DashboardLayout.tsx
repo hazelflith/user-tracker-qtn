@@ -1,8 +1,7 @@
 import { ProductCard, type ProductCardProps } from './ProductCard'
 
-type ProductMetrics = Omit<ProductCardProps, 'isActive' | 'lastSaleAmount'> & {
+type ProductMetrics = Omit<ProductCardProps, 'isActive'> & {
   isActive?: boolean
-  lastSaleAmount?: number
   isUserPulse?: boolean
 }
 
@@ -27,18 +26,12 @@ export function DashboardLayout({ products, pulseMap, now, recentSale }: Dashboa
             id={product.id}
             name={product.name}
             users={product.users}
-            target={product.target}
             accent={product.accent}
             isActive={now - (pulseMap[product.id] ?? 0) < 1200}
             isUserPulse={
               recentSale && recentSale.productId === product.id && now - recentSale.timestamp < 1500
                 ? true
                 : product.isUserPulse ?? false
-            }
-            lastSaleAmount={
-              recentSale && recentSale.productId === product.id && now - recentSale.timestamp < 1500
-                ? recentSale.amount
-                : undefined
             }
           />
         ))}
