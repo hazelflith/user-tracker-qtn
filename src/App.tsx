@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import type { ChangeEvent } from 'react'
 
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout'
 import { Dialog, DialogClose, DialogContent, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
@@ -20,201 +19,179 @@ type SaleEvent = {
 }
 
 const INITIAL_PRODUCTS: Product[] = [
-  { id: 'meepo', name: 'Meepo', revenue: 12_450_000, users: 938, target: 28_000_000, accent: '#2563EB' },
-  { id: 'kenangan', name: 'Kenangan', revenue: 9_860_000, users: 812, target: 24_000_000, accent: '#DB2777' },
-  { id: 'quantumbyte', name: 'QuantumByte', revenue: 15_340_000, users: 1_124, target: 32_000_000, accent: '#0EA5E9' },
-  { id: 'nexius', name: 'Nexius', revenue: 11_170_000, users: 678, target: 26_000_000, accent: '#8B5CF6' },
+  { id: 'meepo', name: 'Meepo', revenue: 12_450_000, users: 0, target: 28_000_000, accent: '#2563EB' },
+  { id: 'kenangan', name: 'Kenangan', revenue: 9_860_000, users: 0, target: 24_000_000, accent: '#DB2777' },
+  { id: 'quantumbyte', name: 'QuantumByte', revenue: 15_340_000, users: 0, target: 32_000_000, accent: '#0EA5E9' },
+  { id: 'nexius', name: 'Nexius', revenue: 11_170_000, users: 0, target: 26_000_000, accent: '#8B5CF6' },
 ]
 
-const randomInRange = (min: number, max: number) => Math.floor(Math.random() * (max - min + 1)) + min
 const AUDIO_SOURCE = '/cash-register-purchase-87313.mp3'
+const API_BASE = import.meta.env.VITE_API_BASE ?? 'http://localhost:3000'
 
 function App() {
   const [products, setProducts] = useState<Product[]>(INITIAL_PRODUCTS)
   const [pulseMap, setPulseMap] = useState<Record<string, number>>({})
   const [recentSale, setRecentSale] = useState<SaleEvent | null>(null)
   const [now, setNow] = useState(() => Date.now())
-  const saleTimerRef = useRef<number | null>(null)
-
-  const audioContextRef = useRef<AudioContext | null>(null)
-  const audioBufferRef = useRef<AudioBuffer | null>(null)
-  const setupPromiseRef = useRef<Promise<void> | null>(null)
-  const fallbackAudioRef = useRef<HTMLAudioElement | null>(null)
-
-  const [isAudioReady, setAudioReady] = useState(false)
-  const [audioError, setAudioError] = useState<string | null>(null)
-  const [salesPerSecond, setSalesPerSecond] = useState(0.12)
   const [isControlOpen, setControlOpen] = useState(false)
+  const [isAudioUnlocked, setAudioUnlocked] = useState(false)
+  const [audioError, setAudioError] = useState<string | null>(null)
+  const [isConnected, setConnected] = useState(false)
 
-  useEffect(() => {
-    const audio = new Audio(AUDIO_SOURCE)
-    audio.preload = 'auto'
-    audio.volume = 1
-    fallbackAudioRef.current = audio
+  const unlockPromiseRef = useRef<Promise<void> | null>(null)
 
-    return () => {
-      audio.pause()
-      audio.src = ''
-      fallbackAudioRef.current = null
+  const warmupAudio = useCallback(async () => {
+    const sample = new Audio(AUDIO_SOURCE)
+    sample.volume = 0
+    sample.muted = true
+    try {
+      await sample.play()
+    } finally {
+      sample.pause()
+      sample.src = ''
     }
   }, [])
 
-  const ensureAudioReady = useCallback(async () => {
-    if (typeof window === 'undefined') return
+  const unlockAudio = useCallback(async () => {
+    if (isAudioUnlocked) return
 
-    if (audioBufferRef.current) {
-      const context = audioContextRef.current
-      if (context && context.state === 'suspended') {
-        await context.resume()
-      }
-      setAudioReady(true)
-      return
-    }
-
-    if (!setupPromiseRef.current) {
-      setupPromiseRef.current = (async () => {
-        const AudioContextCtor = window.AudioContext ?? (window as any).webkitAudioContext
-        if (!AudioContextCtor) {
-          throw new Error('Web Audio API not supported')
-        }
-
-        const context = audioContextRef.current ?? new AudioContextCtor()
-        audioContextRef.current = context
-
-        if (context.state === 'suspended') {
-          await context.resume()
-        }
-
-        const response = await fetch(AUDIO_SOURCE)
-        if (!response.ok) {
-          throw new Error('Failed to load audio file')
-        }
-
-        const arrayBuffer = await response.arrayBuffer()
-        const decoded = await context.decodeAudioData(arrayBuffer.slice(0))
-        audioBufferRef.current = decoded
-        setAudioReady(true)
-        setAudioError(null)
-      })()
+    if (!unlockPromiseRef.current) {
+      unlockPromiseRef.current = warmupAudio()
+        .then(() => {
+          setAudioUnlocked(true)
+          setAudioError(null)
+        })
         .catch((error) => {
-          console.error('Audio setup failed', error)
-          setAudioReady(false)
-          setAudioError('Unable to enable audio. Tap again to allow sound.')
+          console.error('Audio unlock failed', error)
+          setAudioUnlocked(false)
+          setAudioError('Sound blocked. Tap again to enable audio.')
           throw error
         })
         .finally(() => {
-          setupPromiseRef.current = null
+          unlockPromiseRef.current = null
         })
     }
 
-    return setupPromiseRef.current
-  }, [])
+    return unlockPromiseRef.current
+  }, [isAudioUnlocked, warmupAudio])
 
   const playSaleSound = useCallback(async () => {
     try {
-      await ensureAudioReady()
-      const context = audioContextRef.current
-      const buffer = audioBufferRef.current
-
-      if (context && buffer) {
-        if (context.state === 'suspended') {
-          await context.resume()
-        }
-
-        const source = context.createBufferSource()
-        source.buffer = buffer
-        source.connect(context.destination)
-        source.start()
-        setAudioReady(true)
-        setAudioError(null)
-        return true
-      }
+      await unlockAudio()
+      const instance = new Audio(AUDIO_SOURCE)
+      instance.volume = 1
+      instance.play().catch((error) => {
+        console.error('Playback rejected', error)
+        setAudioUnlocked(false)
+        setAudioError('Sound blocked. Tap to re-enable audio.')
+      })
     } catch (error) {
-      console.error('Primary audio playback failed', error)
+      console.error('Unable to play sound', error)
     }
-
-    try {
-      const fallback = new Audio(AUDIO_SOURCE)
-      fallback.volume = 1
-      await fallback.play()
-      setAudioReady(true)
-      setAudioError(null)
-      return true
-    } catch (error) {
-      console.error('Fallback audio playback failed', error)
-      setAudioReady(false)
-      setAudioError('Sound blocked. Tap to re-enable audio.')
-      return false
-    }
-  }, [ensureAudioReady])
+  }, [unlockAudio])
 
   const triggerAudioTest = useCallback(async () => {
     await playSaleSound()
   }, [playSaleSound])
 
-  const handleFrequencyChange = useCallback((event: ChangeEvent<HTMLInputElement>) => {
-    const value = Number(event.target.value)
-    if (Number.isNaN(value)) return
-    setSalesPerSecond(Math.min(3, Math.max(0, value)))
-  }, [])
-
-  const clearSaleTimer = useCallback(() => {
-    if (saleTimerRef.current !== null) {
-      window.clearTimeout(saleTimerRef.current)
-      saleTimerRef.current = null
-    }
-  }, [])
-
-  const generateSale = useCallback(() => {
-    let event: SaleEvent | null = null
-
-    setProducts((previous) => {
-      if (!previous.length) return previous
-
-      const productIndex = Math.floor(Math.random() * previous.length)
-      const product = previous[productIndex]
-      if (!product) return previous
-
-      const saleAmount = randomInRange(180_000, 1_450_000)
-      const updatedProducts = previous.map((entry, index) =>
-        index === productIndex ? { ...entry, revenue: entry.revenue + saleAmount, users: entry.users + 1 } : entry,
+  const fetchInitialState = useCallback(async () => {
+    try {
+      const response = await fetch(`${API_BASE}/api/state`)
+      if (!response.ok) throw new Error(`Failed to load state: ${response.status}`)
+      const payload = await response.json()
+      const users: Record<string, number> = payload.users ?? {}
+      setProducts((previous) =>
+        previous.map((product) => ({
+          ...product,
+          users: users[product.id] ?? 0,
+        })),
       )
+    } catch (error) {
+      console.error('Failed to load initial state', error)
+    }
+  }, [])
 
-      event = { productId: product.id, amount: saleAmount, timestamp: Date.now() + Math.random() }
+  useEffect(() => {
+    void fetchInitialState()
+  }, [fetchInitialState])
 
-      return updatedProducts
-    })
+  useEffect(() => {
+    let stop = false
+    let eventSource: EventSource | null = null
 
-    if (!event) return
+    const connect = () => {
+      if (stop) return
+      const source = new EventSource(`${API_BASE}/api/stream`)
+      eventSource = source
 
-    const { productId, timestamp, amount } = event
+      source.onopen = () => {
+        setConnected(true)
+      }
 
-    setPulseMap((currentMap) => ({ ...currentMap, [productId]: timestamp }))
-    setRecentSale({ productId, amount, timestamp })
-    void playSaleSound()
-  }, [playSaleSound])
+      source.onmessage = async (event) => {
+        try {
+          const payload = JSON.parse(event.data) as { type: string; users?: Record<string, number>; productId?: string; timestamp?: number }
 
-  const scheduleNextSale = useCallback(() => {
-    clearSaleTimer()
+          if (payload.type === 'snapshot' && payload.users) {
+            setProducts((previous) =>
+              previous.map((product) => ({
+                ...product,
+                users: payload.users![product.id] ?? 0,
+              })),
+            )
+            setPulseMap({})
+            setRecentSale(null)
+          }
 
-    if (salesPerSecond <= 0) {
-      return
+          if (payload.type === 'increment' && payload.productId) {
+            const { productId, timestamp = Date.now() } = payload
+            const users = typeof payload.users === 'number' ? payload.users : undefined
+
+            setProducts((previous) =>
+              previous.map((product) =>
+                product.id === productId
+                  ? {
+                      ...product,
+                      users: users ?? product.users + 1,
+                    }
+                  : product,
+              ),
+            )
+
+            setPulseMap((currentMap) => ({ ...currentMap, [productId]: timestamp }))
+            setRecentSale({ productId, amount: 0, timestamp })
+            await playSaleSound()
+          }
+        } catch (error) {
+          console.error('Failed to process stream payload', error)
+        }
+      }
+
+      source.onerror = () => {
+        setConnected(false)
+        source.close()
+        if (!stop) {
+          setTimeout(connect, 1500)
+        }
+      }
     }
 
-    const randomDelayMs = Math.max(80, Math.round((-Math.log(1 - Math.random()) / salesPerSecond) * 1000))
+    connect()
 
-    saleTimerRef.current = window.setTimeout(() => {
-      generateSale()
-      scheduleNextSale()
-    }, randomDelayMs)
-  }, [clearSaleTimer, generateSale, salesPerSecond])
+    return () => {
+      stop = true
+      if (eventSource) {
+        eventSource.close()
+      }
+    }
+  }, [playSaleSound])
 
   useEffect(() => {
     const handler = () => {
-      void ensureAudioReady()
+      void unlockAudio()
     }
 
-    if (!isAudioReady) {
+    if (!isAudioUnlocked) {
       window.addEventListener('pointerdown', handler)
       window.addEventListener('keydown', handler)
     }
@@ -223,31 +200,32 @@ function App() {
       window.removeEventListener('pointerdown', handler)
       window.removeEventListener('keydown', handler)
     }
-  }, [ensureAudioReady, isAudioReady])
+  }, [isAudioUnlocked, unlockAudio])
 
   useEffect(() => {
     const ticker = window.setInterval(() => setNow(Date.now()), 250)
     return () => window.clearInterval(ticker)
   }, [])
 
-  useEffect(() => {
-    scheduleNextSale()
-
-    return () => {
-      clearSaleTimer()
+  const handleManualHit = useCallback(async (productId: string) => {
+    try {
+      const response = await fetch(`${API_BASE}/api/products/${productId}/hit`, { method: 'POST' })
+      if (!response.ok) throw new Error(`Failed to trigger product ${productId}`)
+    } catch (error) {
+      console.error('Manual hit failed', error)
     }
-  }, [clearSaleTimer, scheduleNextSale])
+  }, [])
 
   return (
     <div className="relative flex h-screen w-screen items-stretch justify-center overflow-hidden bg-gradient-to-br from-slate-950 via-slate-900 to-black px-6 pt-8 pb-12 lg:px-10 lg:pt-12 lg:pb-16">
-      {!isAudioReady ? (
+      {!isAudioUnlocked ? (
         <div className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-4 bg-slate-950/80 px-10 text-center backdrop-blur-xl">
           <p className="text-sm font-semibold uppercase tracking-[0.3em] text-slate-300">
             Tap to enable audio
           </p>
           <button
             type="button"
-            onClick={() => void ensureAudioReady()}
+            onClick={() => void unlockAudio()}
             className="rounded-full bg-slate-100 px-6 py-2 text-sm font-semibold text-slate-900 shadow-lg shadow-slate-950/30 transition hover:-translate-y-0.5 hover:bg-white hover:shadow-xl active:translate-y-0"
           >
             Enable Sound
@@ -277,40 +255,48 @@ function App() {
             Control Center
           </DialogTitle>
           <p className="mt-2 text-sm text-slate-400">
-            Fine-tune the mock sale cadence and confirm the audio cue without covering the dashboard.
+            API base: <span className="font-mono text-slate-300">{API_BASE}</span>
+          </p>
+          <p className="mt-1 text-xs text-slate-500">
+            Use the endpoints below to push live user events. Each request increments the matching product.
           </p>
 
-          <div className="mt-6 space-y-6">
-            <div className="space-y-3">
-              <div className="flex items-center justify-between text-[0.65rem] font-semibold uppercase tracking-[0.3em] text-slate-400">
-                <span>Mock Sale Frequency</span>
-                <span>
-                  {salesPerSecond.toFixed(2)} /s · {(salesPerSecond * 60).toFixed(0)} /min
-                </span>
+          <div className="mt-5 space-y-4">
+            {products.map((product) => (
+              <div key={product.id} className="space-y-2 rounded-2xl border border-slate-800 bg-slate-900/60 p-3">
+                <div className="flex items-center justify-between text-sm font-medium text-slate-200">
+                  <span>{product.name}</span>
+                  <span className={isConnected ? 'text-emerald-400' : 'text-slate-500'}>
+                    {isConnected ? 'listening' : 'offline'}
+                  </span>
+                </div>
+                <code className="block truncate rounded-lg bg-black/40 px-3 py-2 text-xs text-emerald-300">
+                  POST {API_BASE}/api/products/{product.id}/hit
+                </code>
+                <div className="flex items-center justify-between text-xs text-slate-400">
+                  <span>Current users: {product.users.toLocaleString('id-ID')}</span>
+                  <button
+                    type="button"
+                    onClick={() => void handleManualHit(product.id)}
+                    className="rounded-full bg-emerald-400/90 px-3 py-1 font-semibold uppercase tracking-[0.2em] text-slate-900 transition hover:-translate-y-0.5 hover:bg-emerald-300"
+                  >
+                    Trigger
+                  </button>
+                </div>
               </div>
-              <input
-                type="range"
-                min={0}
-                max={3}
-                step={0.05}
-                value={salesPerSecond}
-                onChange={handleFrequencyChange}
-                aria-label="Mock sale frequency per second"
-                className="w-full accent-emerald-400"
-              />
-            </div>
+            ))}
+          </div>
 
-            <div className="flex items-center justify-between">
-              <p className="text-[0.65rem] uppercase tracking-[0.3em] text-slate-400">Audio Monitor</p>
-              <button
-                type="button"
-                onClick={() => void triggerAudioTest()}
-                className="inline-flex items-center gap-2 rounded-full bg-slate-100 px-4 py-2 text-xs font-semibold uppercase tracking-[0.25em] text-slate-900 shadow-lg shadow-slate-950/20 transition hover:-translate-y-0.5 hover:bg-white hover:shadow-xl active:translate-y-0 disabled:cursor-not-allowed disabled:bg-slate-500 disabled:text-slate-300"
-                disabled={!isAudioReady}
-              >
-                Test Sound
-              </button>
-            </div>
+          <div className="mt-6 space-y-3 rounded-2xl border border-slate-800 bg-slate-900/60 p-4 text-xs text-slate-400">
+            <p className="font-semibold uppercase tracking-[0.3em] text-slate-300">Audio Monitor</p>
+            <button
+              type="button"
+              onClick={() => void triggerAudioTest()}
+              className="inline-flex items-center justify-center gap-2 rounded-full bg-slate-100 px-4 py-2 text-[0.7rem] font-semibold uppercase tracking-[0.25em] text-slate-900 shadow-lg shadow-slate-950/20 transition hover:-translate-y-0.5 hover:bg-white hover:shadow-xl active:translate-y-0 disabled:cursor-not-allowed disabled:bg-slate-500 disabled:text-slate-300"
+              disabled={!isAudioUnlocked}
+            >
+              Test Sound
+            </button>
           </div>
 
           <DialogClose asChild>
@@ -324,7 +310,7 @@ function App() {
         </DialogContent>
       </Dialog>
 
-      {isAudioReady && audioError ? (
+      {isAudioUnlocked && audioError ? (
         <div className="absolute bottom-20 left-1/2 -translate-x-1/2 rounded-full bg-slate-900/80 px-4 py-2 text-xs font-medium text-rose-400 shadow">
           {audioError}
         </div>
