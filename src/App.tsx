@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout'
-import { Dialog, DialogClose, DialogContent, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 
 type Product = {
   id: string
@@ -65,10 +64,8 @@ function App() {
   const [pulseMap, setPulseMap] = useState<Record<string, number>>({})
   const [recentSale, setRecentSale] = useState<SaleEvent | null>(null)
   const [now, setNow] = useState(() => Date.now())
-  const [isControlOpen, setControlOpen] = useState(false)
   const [isAudioUnlocked, setAudioUnlocked] = useState(false)
   const [audioError, setAudioError] = useState<string | null>(null)
-  const [isConnected, setConnected] = useState(false)
 
   const unlockPromiseRef = useRef<Promise<void> | null>(null)
 
@@ -122,10 +119,6 @@ function App() {
     }
   }, [unlockAudio])
 
-  const triggerAudioTest = useCallback(async () => {
-    await playSaleSound()
-  }, [playSaleSound])
-
   const fetchInitialState = useCallback(async () => {
     try {
       const response = await fetch(`${API_BASE}/api/state`)
@@ -155,10 +148,6 @@ function App() {
       if (stop) return
       const source = new EventSource(`${API_BASE}/api/stream`)
       eventSource = source
-
-      source.onopen = () => {
-        setConnected(true)
-      }
 
       source.onmessage = async (event) => {
         try {
@@ -227,7 +216,6 @@ function App() {
       }
 
       source.onerror = () => {
-        setConnected(false)
         source.close()
         if (!stop) {
           setTimeout(connect, 1500)
@@ -266,15 +254,6 @@ function App() {
     return () => window.clearInterval(ticker)
   }, [])
 
-  const handleManualHit = useCallback(async (productId: string) => {
-    try {
-      const response = await fetch(`${API_BASE}/api/products/${productId}/hit`, { method: 'POST' })
-      if (!response.ok) throw new Error(`Failed to trigger product ${productId}`)
-    } catch (error) {
-      console.error('Manual hit failed', error)
-    }
-  }, [])
-
   return (
     <div className="relative flex h-screen w-screen items-stretch justify-center overflow-hidden bg-gradient-to-br from-slate-950 via-slate-900 to-black px-6 pt-8 pb-12 lg:px-10 lg:pt-12 lg:pb-16">
       {!isAudioUnlocked ? (
@@ -299,76 +278,6 @@ function App() {
       <div className="flex h-full w-full max-w-[720px] flex-col pb-4">
         <DashboardLayout products={products} pulseMap={pulseMap} now={now} recentSale={recentSale} />
       </div>
-
-      <Dialog open={isControlOpen} onOpenChange={setControlOpen}>
-        <DialogTrigger asChild>
-          <button
-            type="button"
-            className="group absolute bottom-6 right-6 z-30 flex items-center gap-2 rounded-full bg-slate-100 px-5 py-2 text-xs font-semibold uppercase tracking-[0.3em] text-slate-900 shadow-lg shadow-slate-950/30 transition hover:-translate-y-0.5 hover:bg-white hover:shadow-2xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white/70"
-          >
-            Live Controls
-          </button>
-        </DialogTrigger>
-        <DialogContent className="max-w-sm border-slate-800 bg-slate-900/95 p-6 text-slate-100">
-          <DialogTitle className="text-base font-semibold uppercase tracking-[0.35em] text-slate-300">
-            Control Center
-          </DialogTitle>
-          <p className="mt-2 text-sm text-slate-400">
-            API base: <span className="font-mono text-slate-300">{API_BASE}</span>
-          </p>
-          <p className="mt-1 text-xs text-slate-500">
-            Use the endpoints below to push live user events. Each request increments the matching product.
-          </p>
-
-          <div className="mt-5 space-y-4">
-            {products.map((product) => (
-              <div key={product.id} className="space-y-2 rounded-2xl border border-slate-800 bg-slate-900/60 p-3">
-                <div className="flex items-center justify-between text-sm font-medium text-slate-200">
-                  <span>{product.name}</span>
-                  <span className={isConnected ? 'text-emerald-400' : 'text-slate-500'}>
-                    {isConnected ? 'listening' : 'offline'}
-                  </span>
-                </div>
-                <code className="block truncate rounded-lg bg-black/40 px-3 py-2 text-xs text-emerald-300">
-                  POST {API_BASE}/api/products/{product.id}/hit
-                </code>
-                <div className="flex items-center justify-between text-xs text-slate-400">
-                  <span>Current users: {product.users.toLocaleString('id-ID')}</span>
-                  <button
-                    type="button"
-                    onClick={() => void handleManualHit(product.id)}
-                    className="rounded-full bg-emerald-400/90 px-3 py-1 font-semibold uppercase tracking-[0.2em] text-slate-900 transition hover:-translate-y-0.5 hover:bg-emerald-300"
-                  >
-                    Trigger
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          <div className="mt-6 space-y-3 rounded-2xl border border-slate-800 bg-slate-900/60 p-4 text-xs text-slate-400">
-            <p className="font-semibold uppercase tracking-[0.3em] text-slate-300">Audio Monitor</p>
-            <button
-              type="button"
-              onClick={() => void triggerAudioTest()}
-              className="inline-flex items-center justify-center gap-2 rounded-full bg-slate-100 px-4 py-2 text-[0.7rem] font-semibold uppercase tracking-[0.25em] text-slate-900 shadow-lg shadow-slate-950/20 transition hover:-translate-y-0.5 hover:bg-white hover:shadow-xl active:translate-y-0 disabled:cursor-not-allowed disabled:bg-slate-500 disabled:text-slate-300"
-              disabled={!isAudioUnlocked}
-            >
-              Test Sound
-            </button>
-          </div>
-
-          <DialogClose asChild>
-            <button
-              type="button"
-              className="mt-6 inline-flex w-full items-center justify-center rounded-full bg-slate-100 px-4 py-2 text-xs font-semibold uppercase tracking-[0.25em] text-slate-900 shadow-lg shadow-slate-950/20 transition hover:-translate-y-0.5 hover:bg-white hover:shadow-xl active:translate-y-0"
-            >
-              Done
-            </button>
-          </DialogClose>
-        </DialogContent>
-      </Dialog>
-
       {isAudioUnlocked && audioError ? (
         <div className="absolute bottom-20 left-1/2 -translate-x-1/2 rounded-full bg-slate-900/80 px-4 py-2 text-xs font-medium text-rose-400 shadow">
           {audioError}
