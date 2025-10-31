@@ -2,7 +2,7 @@ import http from 'node:http'
 import https from 'node:https'
 import { URL } from 'node:url'
 
-const BASE = process.env.API_BASE ?? 'http://localhost:3000'
+const BASE = 'https://tracker.qtn.ai'
 const PRODUCT = process.argv[2]
 const COUNT = Number(process.argv[3] ?? '1')
 

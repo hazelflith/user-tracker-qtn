@@ -25,6 +25,38 @@ const INITIAL_PRODUCTS: Product[] = [
   { id: 'nexius', name: 'Nexius', revenue: 11_170_000, users: 0, target: 26_000_000, accent: '#8B5CF6' },
 ]
 
+const normalizeIncomingUsers = (value: unknown): number | undefined => {
+  if (value == null) return undefined
+  if (typeof value === 'number') return value
+  if (typeof value === 'string') {
+    const parsed = Number.parseFloat(value)
+    return Number.isFinite(parsed) ? parsed : undefined
+  }
+  if (typeof value === 'object') {
+    // handle MongoDB extended JSON { $numberInt: "123" }
+    if ('$numberInt' in (value as Record<string, unknown>)) {
+      const parsed = Number.parseInt((value as Record<string, string>).$numberInt, 10)
+      return Number.isFinite(parsed) ? parsed : undefined
+    }
+    if ('$numberLong' in (value as Record<string, unknown>)) {
+      const parsed = Number.parseInt((value as Record<string, string>).$numberLong, 10)
+      return Number.isFinite(parsed) ? parsed : undefined
+    }
+    const raw = (value as { valueOf?: () => unknown; toString?: () => string }).valueOf?.()
+    if (raw !== value) {
+      const normalized = normalizeIncomingUsers(raw)
+      if (normalized !== undefined) return normalized
+    }
+    const stringified = (value as { toString?: () => string }).toString?.()
+    if (stringified && stringified !== '[object Object]') {
+      const parsed = Number.parseFloat(stringified)
+      if (Number.isFinite(parsed)) return parsed
+    }
+  }
+  const numeric = Number(value)
+  return Number.isFinite(numeric) ? numeric : undefined
+}
+
 const AUDIO_SOURCE = '/cash-register-purchase-87313.mp3'
 const API_BASE = import.meta.env.VITE_API_BASE ?? 'http://localhost:3000'
 
@@ -130,13 +162,35 @@ function App() {
 
       source.onmessage = async (event) => {
         try {
-          const payload = JSON.parse(event.data) as { type: string; users?: Record<string, number>; productId?: string; timestamp?: number }
+          const payload = JSON.parse(event.data) as {
+            type: string
+            users?:
+              | Record<string, number | { $numberInt?: string; $numberLong?: string } | string>
+              | Array<{ _id?: string; users?: number | { $numberInt?: string; $numberLong?: string } | string }>
+            productId?: string
+            usersLegacy?: number
+            timestamp?: number
+          }
 
           if (payload.type === 'snapshot' && payload.users) {
+            const usersMap: Record<string, number> = Array.isArray(payload.users)
+              ? payload.users.reduce<Record<string, number>>((acc, doc) => {
+                  if (!doc || !doc._id) return acc
+                  const normalized = normalizeIncomingUsers(doc.users)
+                  if (normalized !== undefined) acc[doc._id] = normalized
+                  return acc
+                }, {})
+              : Object.fromEntries(
+                  Object.entries(payload.users).map(([key, value]) => [
+                    key,
+                    normalizeIncomingUsers(value) ?? 0,
+                  ]),
+                )
+
             setProducts((previous) =>
               previous.map((product) => ({
                 ...product,
-                users: payload.users![product.id] ?? 0,
+                users: usersMap[product.id] ?? 0,
               })),
             )
             setPulseMap({})
@@ -145,14 +199,19 @@ function App() {
 
           if (payload.type === 'increment' && payload.productId) {
             const { productId, timestamp = Date.now() } = payload
-            const users = typeof payload.users === 'number' ? payload.users : undefined
+            const normalized =
+              normalizeIncomingUsers(
+                Array.isArray(payload.users)
+                  ? payload.users.find((doc) => doc && doc._id === productId)?.users
+                  : payload.users?.[productId],
+              ) ?? normalizeIncomingUsers(payload.usersLegacy)
 
             setProducts((previous) =>
               previous.map((product) =>
                 product.id === productId
                   ? {
                       ...product,
-                      users: users ?? product.users + 1,
+                      users: normalized ?? product.users + 1,
                     }
                   : product,
               ),

@@ -12,6 +12,21 @@ const PRODUCT_IDS = ['meepo', 'kenangan', 'quantumbyte', 'nexius']
 const clients = new Set()
 let collection
 
+const normalizeUserValue = (value) => {
+  if (value == null) return 0
+  if (typeof value === 'number') return value
+  if (typeof value === 'bigint') return Number(value)
+  if (typeof value === 'object' && typeof value.toNumber === 'function') {
+    try {
+      return value.toNumber()
+    } catch (error) {
+      return Number.parseInt(value, 10) || 0
+    }
+  }
+  if (typeof value === 'string') return Number.parseInt(value, 10) || 0
+  return 0
+}
+
 const serializeUsers = async () => {
   const docs = await collection
     .find({ _id: { $in: PRODUCT_IDS } }, { projection: { users: 1 } })
@@ -19,7 +34,7 @@ const serializeUsers = async () => {
 
   const map = Object.fromEntries(PRODUCT_IDS.map((id) => [id, 0]))
   for (const doc of docs) {
-    map[doc._id] = doc.users ?? 0
+    map[doc._id] = normalizeUserValue(doc.users)
   }
   return map
 }
@@ -98,18 +113,22 @@ async function main() {
       const result = await collection.findOneAndUpdate(
         { _id: id },
         { $inc: { users: 1 } },
-        { returnDocument: 'after' },
+        { returnDocument: 'after', upsert: true },
       )
 
       if (!result.value) {
-        res.status(404).json({ error: 'Product not initialized' })
-        return
+        const fallback = await collection.findOne({ _id: id })
+        if (!fallback) {
+          res.status(500).json({ error: 'Product could not be incremented' })
+          return
+        }
+        result.value = fallback
       }
 
       const event = {
         type: 'increment',
         productId: id,
-        users: result.value.users ?? 0,
+        users: normalizeUserValue(result.value.users),
         timestamp: Date.now(),
       }
       broadcast(event)
