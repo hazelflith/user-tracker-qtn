@@ -35,7 +35,7 @@ export function DashboardLayout({ products, pulseMap, now, recentSale }: Dashboa
       wrapperClassName?: string
     }
   > = {
-    meepo: { src: '/MEEPO_LOGO_COLOR.png', alt: 'Meepo', className: 'max-h-12', wrapperClassName: 'h-16 w-40' },
+    meepo: { src: '/MEEPO_LOGO_COLOR.png', alt: 'Meepo', className: 'max-h-9' },
     kenangan: { src: '/logo-kenangan-red.svg', alt: 'Kenangan', className: 'max-h-9' },
     quantumbyte: { src: '/logo_quantumbyte.png', alt: 'QuantumByte', className: 'max-h-9' },
     nexius: {
@@ -47,8 +47,8 @@ export function DashboardLayout({ products, pulseMap, now, recentSale }: Dashboa
   }
 
   return (
-    <div className="flex h-full flex-col justify-between gap-4">
-      <div className="grid flex-1 grid-rows-4 gap-4">
+    <div className="flex h-full flex-col justify-between gap-3">
+      <div className="grid flex-1 grid-rows-4 gap-3">
         {products.map((product) => (
           <ProductCard
             key={product.id}
