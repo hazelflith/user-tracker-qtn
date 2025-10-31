@@ -35,7 +35,7 @@ export function DashboardLayout({ products, pulseMap, now, recentSale }: Dashboa
       wrapperClassName?: string
     }
   > = {
-    meepo: { src: '/MEEPO_LOGO_COLOR.png', alt: 'Meepo' },
+    meepo: { src: '/MEEPO_LOGO_COLOR.png', alt: 'Meepo', className: 'max-h-12', wrapperClassName: 'h-16 w-40' },
     kenangan: { src: '/logo-kenangan-red.svg', alt: 'Kenangan', className: 'max-h-9' },
     quantumbyte: { src: '/logo_quantumbyte.png', alt: 'QuantumByte', className: 'max-h-9' },
     nexius: {

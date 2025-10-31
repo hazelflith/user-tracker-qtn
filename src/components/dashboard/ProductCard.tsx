@@ -69,21 +69,21 @@ export function ProductCard({
         {logoSrc ? (
           <div
             className={cn(
-              'flex h-12 w-32 items-center justify-center rounded-xl border border-white/70 bg-white/75 shadow-inner shadow-slate-900/5',
+              'flex h-14 w-36 items-center justify-center rounded-2xl border border-white/70 bg-white/75 shadow-inner shadow-slate-900/5',
               logoWrapperClassName,
             )}
           >
             <img
               src={logoSrc}
               alt={logoAlt ?? name}
-              className={cn('max-h-10 w-auto max-w-[7.5rem] object-contain', logoClassName)}
+              className={cn('max-h-12 w-auto max-w-[9rem] object-contain', logoClassName)}
             />
           </div>
         ) : (
           <p className="text-sm font-semibold uppercase tracking-[0.45em] text-slate-500/80">{name}</p>
         )}
-        <p className="text-[0.65rem] font-semibold uppercase tracking-[0.35em] text-slate-400">{label}</p>
       </div>
+      <p className="text-[0.65rem] font-semibold uppercase tracking-[0.35em] text-slate-400">{label}</p>
       <div>
         <p
           className={cn(
