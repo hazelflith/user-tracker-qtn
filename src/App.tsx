@@ -199,37 +199,6 @@ function App() {
     }
   }, [])
 
-  const generateSale = useCallback(() => {
-    let event: SaleEvent | null = null
-
-    setProducts((previous) => {
-      if (!previous.length) return previous
-
-      const productIndex = Math.floor(Math.random() * previous.length)
-      const product = previous[productIndex]
-      if (!product) return previous
-
-      const saleAmount = randomInRange(180_000, 1_450_000)
-      const updatedProducts = previous.map((entry, index) =>
-        index === productIndex ? { ...entry, revenue: entry.revenue + saleAmount, users: entry.users + 1 } : entry,
-      )
-
-      event = { productId: product.id, amount: saleAmount, timestamp: Date.now() + Math.random() }
-
-      return updatedProducts
-    })
-
-    if (!event) return
-
-    const { productId, timestamp, amount } = event
-    setPulseMap((currentMap) => ({ ...currentMap, [productId]: timestamp }))
-
-    const nextEvent: SaleEvent = { productId, amount, timestamp }
-    saleQueueRef.current.push(nextEvent)
-    setRecentSale(nextEvent)
-    setQueueVersion((value) => value + 1)
-  }, [])
-
   const flushAudioQueue = useCallback(async () => {
     if (isProcessingQueueRef.current) return
     if (!saleQueueRef.current.length) return
@@ -263,6 +232,38 @@ function App() {
       isProcessingQueueRef.current = false
     }
   }, [ensureAudioSetup, playCashSound])
+
+  const generateSale = useCallback(() => {
+    let event: SaleEvent | null = null
+
+    setProducts((previous) => {
+      if (!previous.length) return previous
+
+      const productIndex = Math.floor(Math.random() * previous.length)
+      const product = previous[productIndex]
+      if (!product) return previous
+
+      const saleAmount = randomInRange(180_000, 1_450_000)
+      const updatedProducts = previous.map((entry, index) =>
+        index === productIndex ? { ...entry, revenue: entry.revenue + saleAmount, users: entry.users + 1 } : entry,
+      )
+
+      event = { productId: product.id, amount: saleAmount, timestamp: Date.now() + Math.random() }
+
+      return updatedProducts
+    })
+
+    if (!event) return
+
+    const { productId, timestamp, amount } = event
+    setPulseMap((currentMap) => ({ ...currentMap, [productId]: timestamp }))
+
+    const nextEvent: SaleEvent = { productId, amount, timestamp }
+    saleQueueRef.current.push(nextEvent)
+    setRecentSale(nextEvent)
+    setQueueVersion((value) => value + 1)
+    void flushAudioQueue()
+  }, [flushAudioQueue])
 
   const scheduleNextSale = useCallback(() => {
     clearSaleTimer()

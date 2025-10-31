@@ -1,3 +1,5 @@
+import { useEffect, useRef, useState } from 'react'
+
 import { cn } from '@/lib/utils'
 
 import { Card } from '../ui/card'
@@ -16,6 +18,27 @@ export type ProductCardProps = {
 
 export function ProductCard({ name, users, label, accent, isActive, isUserPulse = false }: ProductCardProps) {
   const formattedUsers = numberFormatter.format(users)
+  const previousUsersRef = useRef(users)
+  const [hasLocalPulse, setHasLocalPulse] = useState(false)
+
+  useEffect(() => {
+    let timeout: number | null = null
+
+    if (users > previousUsersRef.current) {
+      setHasLocalPulse(true)
+      timeout = window.setTimeout(() => setHasLocalPulse(false), 1800)
+    }
+
+    previousUsersRef.current = users
+
+    return () => {
+      if (timeout !== null) {
+        window.clearTimeout(timeout)
+      }
+    }
+  }, [users])
+
+  const shouldPulse = isActive || isUserPulse || hasLocalPulse
 
   return (
     <Card className="relative flex h-full flex-col justify-between overflow-hidden border-none bg-white/85 px-5 py-5 shadow-card ring-1 ring-white/70 backdrop-blur-xl md:px-6 md:py-6">
@@ -37,7 +60,7 @@ export function ProductCard({ name, users, label, accent, isActive, isUserPulse 
         <p
           className={cn(
             'text-5xl font-semibold tracking-tight text-slate-900 transition-all duration-300 md:text-6xl',
-            (isActive || isUserPulse) && 'animate-pop text-emerald-500 drop-shadow-sm',
+            shouldPulse && 'animate-pop text-emerald-500 drop-shadow-sm',
           )}
         >
           {formattedUsers}
