@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import type { ChangeEvent } from 'react'
 
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout'
+import { Dialog, DialogClose, DialogContent, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 
 type Product = {
   id: string
@@ -45,6 +46,7 @@ function App() {
   const [audioError, setAudioError] = useState<string | null>(null)
   const [salesPerSecond, setSalesPerSecond] = useState(0.12)
   const [queueVersion, setQueueVersion] = useState(0)
+  const [isControlOpen, setControlOpen] = useState(false)
 
   useEffect(() => {
     const audio = new Audio(AUDIO_SOURCE)
@@ -345,39 +347,66 @@ function App() {
         <DashboardLayout products={products} pulseMap={pulseMap} now={now} recentSale={recentSale} />
       </div>
 
-      <div className="pointer-events-none absolute inset-x-0 bottom-4 z-10 flex justify-center px-6 lg:bottom-6 lg:px-10">
-        <div className="pointer-events-auto flex w-full max-w-[720px] flex-col gap-3 rounded-3xl bg-white/80 px-5 py-4 shadow-card backdrop-blur">
-          <div className="flex items-center justify-between">
-            <span className="text-[0.65rem] font-semibold uppercase tracking-[0.3em] text-slate-500">
-              Mock Sale Frequency
-            </span>
-            <span className="text-xs font-medium text-slate-500">
-              {salesPerSecond.toFixed(2)} /s · {(salesPerSecond * 60).toFixed(0)} /min
-            </span>
+      <Dialog open={isControlOpen} onOpenChange={setControlOpen}>
+        <DialogTrigger asChild>
+          <button
+            type="button"
+            className="group absolute bottom-6 right-6 z-30 flex items-center gap-2 rounded-full bg-slate-900 px-5 py-2 text-xs font-semibold uppercase tracking-[0.3em] text-white shadow-lg shadow-slate-900/30 transition hover:-translate-y-0.5 hover:bg-slate-800 hover:shadow-2xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white/70"
+          >
+            Live Controls
+          </button>
+        </DialogTrigger>
+        <DialogContent className="max-w-sm p-6">
+          <DialogTitle className="text-base font-semibold uppercase tracking-[0.35em] text-slate-400">
+            Control Center
+          </DialogTitle>
+          <p className="mt-2 text-sm text-slate-500">
+            Fine-tune the mock sale cadence and confirm the audio cue without covering the dashboard.
+          </p>
+
+          <div className="mt-6 space-y-6">
+            <div className="space-y-3">
+              <div className="flex items-center justify-between text-[0.65rem] font-semibold uppercase tracking-[0.3em] text-slate-500">
+                <span>Mock Sale Frequency</span>
+                <span>
+                  {salesPerSecond.toFixed(2)} /s · {(salesPerSecond * 60).toFixed(0)} /min
+                </span>
+              </div>
+              <input
+                type="range"
+                min={0}
+                max={3}
+                step={0.05}
+                value={salesPerSecond}
+                onChange={handleFrequencyChange}
+                aria-label="Mock sale frequency per second"
+                className="w-full accent-slate-900"
+              />
+            </div>
+
+            <div className="flex items-center justify-between">
+              <p className="text-[0.65rem] uppercase tracking-[0.3em] text-slate-400">Audio Monitor</p>
+              <button
+                type="button"
+                onClick={() => void triggerAudioTest()}
+                className="inline-flex items-center gap-2 rounded-full bg-slate-900 px-4 py-2 text-xs font-semibold uppercase tracking-[0.25em] text-white shadow-lg shadow-slate-900/20 transition hover:-translate-y-0.5 hover:shadow-xl active:translate-y-0 disabled:cursor-not-allowed disabled:bg-slate-500"
+                disabled={!isAudioEnabled}
+              >
+                Test Sound
+              </button>
+            </div>
           </div>
-          <input
-            type="range"
-            min={0}
-            max={3}
-            step={0.05}
-            value={salesPerSecond}
-            onChange={handleFrequencyChange}
-            aria-label="Mock sale frequency per second"
-            className="w-full accent-slate-900"
-          />
-          <div className="flex items-center justify-between">
-            <p className="text-[0.65rem] uppercase tracking-[0.3em] text-slate-400">Audio Monitor</p>
+
+          <DialogClose asChild>
             <button
               type="button"
-              onClick={() => void triggerAudioTest()}
-              className="inline-flex items-center gap-2 rounded-full bg-slate-900 px-4 py-2 text-xs font-semibold uppercase tracking-[0.25em] text-white shadow-lg shadow-slate-900/20 transition hover:-translate-y-0.5 hover:shadow-xl active:translate-y-0 disabled:cursor-not-allowed disabled:bg-slate-400"
-              disabled={!isAudioEnabled}
+              className="mt-6 inline-flex w-full items-center justify-center rounded-full bg-slate-900 px-4 py-2 text-xs font-semibold uppercase tracking-[0.25em] text-white shadow-lg shadow-slate-900/20 transition hover:-translate-y-0.5 hover:bg-slate-800 hover:shadow-xl active:translate-y-0"
             >
-              Test Sound
+              Done
             </button>
-          </div>
-        </div>
-      </div>
+          </DialogClose>
+        </DialogContent>
+      </Dialog>
 
       {isAudioEnabled && audioError ? (
         <div className="absolute bottom-20 left-1/2 -translate-x-1/2 rounded-full bg-white/80 px-4 py-2 text-xs font-medium text-rose-500 shadow">
