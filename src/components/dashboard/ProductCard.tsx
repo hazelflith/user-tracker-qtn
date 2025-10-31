@@ -69,7 +69,7 @@ export function ProductCard({
         {logoSrc ? (
           <div
             className={cn(
-              'flex h-9 w-24 items-center justify-center rounded-2xl border border-slate-700 bg-slate-900/80 shadow-inner shadow-black/30',
+              'flex h-9 w-24 items-center justify-center rounded-2xl bg-slate-900/80 shadow-inner shadow-black/30',
               logoWrapperClassName,
             )}
           >

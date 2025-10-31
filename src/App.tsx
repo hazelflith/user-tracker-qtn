@@ -357,7 +357,7 @@ function App() {
             Live Controls
           </button>
         </DialogTrigger>
-        <DialogContent className="max-w-sm border-slate-800 bg-slate-900/95 p-6 text-slate-100">
+        <DialogContent className="max-w-sm -border-slate800 bg-slate-900/95 p-6 text-slate-100">
           <DialogTitle className="text-base font-semibold uppercase tracking-[0.35em] text-slate-300">
             Control Center
           </DialogTitle>
