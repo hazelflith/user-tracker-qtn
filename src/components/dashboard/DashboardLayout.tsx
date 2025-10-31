@@ -26,6 +26,19 @@ export function DashboardLayout({ products, pulseMap, now, recentSale }: Dashboa
     nexius: 'Report generation',
   }
 
+  const logos: Record<
+    string,
+    {
+      src: string
+      alt: string
+    }
+  > = {
+    meepo: { src: '/MEEPO_LOGO_COLOR.png', alt: 'Meepo' },
+    kenangan: { src: '/logo-kenangan-red.svg', alt: 'Kenangan' },
+    quantumbyte: { src: '/logo_quantumbyte.png', alt: 'QuantumByte' },
+    nexius: { src: '/nexius-logo.webp', alt: 'Nexius' },
+  }
+
   return (
     <div className="flex h-full flex-col justify-between gap-4">
       <div className="grid flex-1 grid-rows-4 gap-4">
@@ -36,6 +49,8 @@ export function DashboardLayout({ products, pulseMap, now, recentSale }: Dashboa
             name={product.name}
             users={product.users}
             label={labels[product.id] ?? 'Active users'}
+            logoSrc={logos[product.id]?.src}
+            logoAlt={logos[product.id]?.alt}
             accent={product.accent}
             isActive={now - (pulseMap[product.id] ?? 0) < 1200}
             isUserPulse={Boolean(
