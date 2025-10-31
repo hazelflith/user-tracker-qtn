@@ -47,8 +47,8 @@ export function DashboardLayout({ products, pulseMap, now, recentSale }: Dashboa
   }
 
   return (
-    <div className="flex h-full flex-col justify-between gap-2">
-      <div className="grid flex-1 grid-rows-4 gap-2">
+    <div className="flex h-full flex-col justify-between gap-1.5">
+      <div className="grid flex-1 grid-rows-4 gap-1.5">
         {products.map((product) => (
           <ProductCard
             key={product.id}
