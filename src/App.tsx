@@ -324,21 +324,21 @@ function App() {
   }, [clearSaleTimer, scheduleNextSale])
 
   return (
-    <div className="relative flex h-screen w-screen items-stretch justify-center overflow-hidden bg-gradient-to-br from-slate-100 via-white to-slate-200 px-6 pt-8 pb-12 lg:px-10 lg:pt-12 lg:pb-16">
+    <div className="relative flex h-screen w-screen items-stretch justify-center overflow-hidden bg-gradient-to-br from-slate-950 via-slate-900 to-black px-6 pt-8 pb-12 lg:px-10 lg:pt-12 lg:pb-16">
       {!isAudioEnabled ? (
-        <div className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-4 bg-white/80 px-10 text-center backdrop-blur-xl">
-          <p className="text-sm font-semibold uppercase tracking-[0.3em] text-slate-500">
+        <div className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-4 bg-slate-950/80 px-10 text-center backdrop-blur-xl">
+          <p className="text-sm font-semibold uppercase tracking-[0.3em] text-slate-300">
             Tap to enable audio
           </p>
           <button
             type="button"
             onClick={() => void ensureAudioSetup()}
-            className="rounded-full bg-slate-900 px-6 py-2 text-sm font-semibold text-white shadow-lg shadow-slate-900/20 transition hover:-translate-y-0.5 hover:shadow-xl active:translate-y-0"
+            className="rounded-full bg-slate-100 px-6 py-2 text-sm font-semibold text-slate-900 shadow-lg shadow-slate-950/30 transition hover:-translate-y-0.5 hover:bg-white hover:shadow-xl active:translate-y-0"
           >
             Enable Sound
           </button>
-          {audioError ? <p className="text-xs text-rose-500">{audioError}</p> : null}
-          <p className="max-w-sm text-xs text-slate-500">
+          {audioError ? <p className="text-xs text-rose-400">{audioError}</p> : null}
+          <p className="max-w-sm text-xs text-slate-400">
             Browsers block autoplay. Touch anywhere or use the button once to let the dashboard ring on every sale.
           </p>
         </div>
@@ -352,22 +352,22 @@ function App() {
         <DialogTrigger asChild>
           <button
             type="button"
-            className="group absolute bottom-6 right-6 z-30 flex items-center gap-2 rounded-full bg-slate-900 px-5 py-2 text-xs font-semibold uppercase tracking-[0.3em] text-white shadow-lg shadow-slate-900/30 transition hover:-translate-y-0.5 hover:bg-slate-800 hover:shadow-2xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white/70"
+            className="group absolute bottom-6 right-6 z-30 flex items-center gap-2 rounded-full bg-slate-100 px-5 py-2 text-xs font-semibold uppercase tracking-[0.3em] text-slate-900 shadow-lg shadow-slate-950/30 transition hover:-translate-y-0.5 hover:bg-white hover:shadow-2xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white/70"
           >
             Live Controls
           </button>
         </DialogTrigger>
-        <DialogContent className="max-w-sm p-6">
-          <DialogTitle className="text-base font-semibold uppercase tracking-[0.35em] text-slate-400">
+        <DialogContent className="max-w-sm border-slate-800 bg-slate-900/95 p-6 text-slate-100">
+          <DialogTitle className="text-base font-semibold uppercase tracking-[0.35em] text-slate-300">
             Control Center
           </DialogTitle>
-          <p className="mt-2 text-sm text-slate-500">
+          <p className="mt-2 text-sm text-slate-400">
             Fine-tune the mock sale cadence and confirm the audio cue without covering the dashboard.
           </p>
 
           <div className="mt-6 space-y-6">
             <div className="space-y-3">
-              <div className="flex items-center justify-between text-[0.65rem] font-semibold uppercase tracking-[0.3em] text-slate-500">
+              <div className="flex items-center justify-between text-[0.65rem] font-semibold uppercase tracking-[0.3em] text-slate-400">
                 <span>Mock Sale Frequency</span>
                 <span>
                   {salesPerSecond.toFixed(2)} /s · {(salesPerSecond * 60).toFixed(0)} /min
@@ -381,7 +381,7 @@ function App() {
                 value={salesPerSecond}
                 onChange={handleFrequencyChange}
                 aria-label="Mock sale frequency per second"
-                className="w-full accent-slate-900"
+                className="w-full accent-emerald-400"
               />
             </div>
 
@@ -390,7 +390,7 @@ function App() {
               <button
                 type="button"
                 onClick={() => void triggerAudioTest()}
-                className="inline-flex items-center gap-2 rounded-full bg-slate-900 px-4 py-2 text-xs font-semibold uppercase tracking-[0.25em] text-white shadow-lg shadow-slate-900/20 transition hover:-translate-y-0.5 hover:shadow-xl active:translate-y-0 disabled:cursor-not-allowed disabled:bg-slate-500"
+                className="inline-flex items-center gap-2 rounded-full bg-slate-100 px-4 py-2 text-xs font-semibold uppercase tracking-[0.25em] text-slate-900 shadow-lg shadow-slate-950/20 transition hover:-translate-y-0.5 hover:bg-white hover:shadow-xl active:translate-y-0 disabled:cursor-not-allowed disabled:bg-slate-500 disabled:text-slate-300"
                 disabled={!isAudioEnabled}
               >
                 Test Sound
@@ -401,7 +401,7 @@ function App() {
           <DialogClose asChild>
             <button
               type="button"
-              className="mt-6 inline-flex w-full items-center justify-center rounded-full bg-slate-900 px-4 py-2 text-xs font-semibold uppercase tracking-[0.25em] text-white shadow-lg shadow-slate-900/20 transition hover:-translate-y-0.5 hover:bg-slate-800 hover:shadow-xl active:translate-y-0"
+              className="mt-6 inline-flex w-full items-center justify-center rounded-full bg-slate-100 px-4 py-2 text-xs font-semibold uppercase tracking-[0.25em] text-slate-900 shadow-lg shadow-slate-950/20 transition hover:-translate-y-0.5 hover:bg-white hover:shadow-xl active:translate-y-0"
             >
               Done
             </button>
@@ -410,7 +410,7 @@ function App() {
       </Dialog>
 
       {isAudioEnabled && audioError ? (
-        <div className="absolute bottom-20 left-1/2 -translate-x-1/2 rounded-full bg-white/80 px-4 py-2 text-xs font-medium text-rose-500 shadow">
+        <div className="absolute bottom-20 left-1/2 -translate-x-1/2 rounded-full bg-slate-900/80 px-4 py-2 text-xs font-medium text-rose-400 shadow">
           {audioError}
         </div>
       ) : null}

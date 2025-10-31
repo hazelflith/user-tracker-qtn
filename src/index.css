@@ -5,7 +5,7 @@
 @tailwind utilities;
 
 :root {
-  color-scheme: light;
+  color-scheme: dark;
   font-family: 'Inter', 'Inter Variable', system-ui, sans-serif;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -19,7 +19,7 @@ body,
 
 body {
   margin: 0;
-  background: radial-gradient(circle at top, #ffffff 0%, #eef2ff 55%, #e2e8f0 100%);
-  color: #0f172a;
+  background: radial-gradient(circle at top, #0f172a 0%, #020617 60%, #000 100%);
+  color: #e2e8f0;
   overflow: hidden;
 }

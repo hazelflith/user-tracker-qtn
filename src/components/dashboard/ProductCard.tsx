@@ -56,7 +56,7 @@ export function ProductCard({
   const shouldPulse = isActive || isUserPulse || hasLocalPulse
 
   return (
-    <Card className="relative flex h-full flex-col justify-center gap-3 overflow-hidden border-none bg-white/95 px-4 py-5 shadow-card ring-1 ring-white/70 backdrop-blur-xl">
+    <Card className="relative flex h-full flex-col justify-center gap-3 overflow-hidden border border-slate-800/60 bg-slate-900/80 px-4 py-5 shadow-lg shadow-black/20 backdrop-blur">
       <span
         aria-hidden
         className="absolute inset-x-0 top-0 h-1"
@@ -69,7 +69,7 @@ export function ProductCard({
         {logoSrc ? (
           <div
             className={cn(
-              'flex h-9 w-24 items-center justify-center rounded-2xl border border-white/50 bg-white/80 shadow-inner shadow-slate-900/5',
+              'flex h-9 w-24 items-center justify-center rounded-2xl border border-slate-700 bg-slate-900/80 shadow-inner shadow-black/30',
               logoWrapperClassName,
             )}
           >
@@ -87,8 +87,8 @@ export function ProductCard({
       <div>
         <p
           className={cn(
-            'text-2xl font-semibold tracking-tight text-slate-900 transition-all duration-300 md:text-[1.9rem]',
-            shouldPulse && 'animate-pop text-emerald-500 drop-shadow-sm',
+            'text-2xl font-semibold tracking-tight text-slate-100 transition-all duration-300 md:text-[1.9rem]',
+            shouldPulse && 'animate-pop text-emerald-400 drop-shadow-sm',
           )}
         >
           {formattedUsers}
