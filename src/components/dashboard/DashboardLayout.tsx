@@ -39,7 +39,7 @@ export function DashboardLayout({ products, pulseMap, now, recentSale }: Dashboa
     kenangan: { src: '/logo-kenangan-red.svg', alt: 'Kenangan', className: 'max-h-7' },
     quantumbyte: { src: '/logo_quantumbyte.png', alt: 'QuantumByte', className: 'max-h-7' },
     nexius: {
-      src: '/nexius-logo.png',
+      src: '/Logo-11.png',
       alt: 'Nexius',
       className: 'max-h-6',
     },
