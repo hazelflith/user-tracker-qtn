@@ -34,157 +34,123 @@ function App() {
   const [pulseMap, setPulseMap] = useState<Record<string, number>>({})
   const [recentSale, setRecentSale] = useState<SaleEvent | null>(null)
   const [now, setNow] = useState(() => Date.now())
-  const audioRef = useRef<HTMLAudioElement | null>(null)
+  const saleTimerRef = useRef<number | null>(null)
+
   const audioContextRef = useRef<AudioContext | null>(null)
   const audioBufferRef = useRef<AudioBuffer | null>(null)
-  const audioBufferPromiseRef = useRef<Promise<void> | null>(null)
-  const saleQueueRef = useRef<SaleEvent[]>([])
-  const isProcessingQueueRef = useRef(false)
-  const lastPlayedRef = useRef<number>(0)
-  const saleTimerRef = useRef<number | null>(null)
-  const [isAudioEnabled, setAudioEnabled] = useState(false)
+  const setupPromiseRef = useRef<Promise<void> | null>(null)
+  const fallbackAudioRef = useRef<HTMLAudioElement | null>(null)
+
+  const [isAudioReady, setAudioReady] = useState(false)
   const [audioError, setAudioError] = useState<string | null>(null)
   const [salesPerSecond, setSalesPerSecond] = useState(0.12)
-  const [queueVersion, setQueueVersion] = useState(0)
   const [isControlOpen, setControlOpen] = useState(false)
 
   useEffect(() => {
     const audio = new Audio(AUDIO_SOURCE)
     audio.preload = 'auto'
     audio.volume = 1
-    audioRef.current = audio
+    fallbackAudioRef.current = audio
 
     return () => {
       audio.pause()
       audio.src = ''
-      audioRef.current = null
+      fallbackAudioRef.current = null
     }
   }, [])
 
-  const ensureAudioSetup = useCallback(async () => {
-    if (typeof window === 'undefined') return false
+  const ensureAudioReady = useCallback(async () => {
+    if (typeof window === 'undefined') return
 
-    try {
-      if (!audioContextRef.current) {
-        const AudioContextCtor = (window as any).AudioContext ?? (window as any).webkitAudioContext
-
-        if (AudioContextCtor) {
-          audioContextRef.current = new AudioContextCtor()
-        }
-      }
-
+    if (audioBufferRef.current) {
       const context = audioContextRef.current
+      if (context && context.state === 'suspended') {
+        await context.resume()
+      }
+      setAudioReady(true)
+      return
+    }
 
-      if (context) {
+    if (!setupPromiseRef.current) {
+      setupPromiseRef.current = (async () => {
+        const AudioContextCtor = window.AudioContext ?? (window as any).webkitAudioContext
+        if (!AudioContextCtor) {
+          throw new Error('Web Audio API not supported')
+        }
+
+        const context = audioContextRef.current ?? new AudioContextCtor()
+        audioContextRef.current = context
+
         if (context.state === 'suspended') {
           await context.resume()
         }
 
-        if (!audioBufferRef.current) {
-          if (!audioBufferPromiseRef.current) {
-            audioBufferPromiseRef.current = fetch(AUDIO_SOURCE)
-              .then((response) => {
-                if (!response.ok) {
-                  throw new Error('Failed to load audio file.')
-                }
-                return response.arrayBuffer()
-              })
-              .then(
-                (arrayBuffer) =>
-                  new Promise<void>((resolve, reject) => {
-                    context.decodeAudioData(
-                      arrayBuffer.slice(0),
-                      (decoded) => {
-                        audioBufferRef.current = decoded
-                        resolve()
-                      },
-                      (error) => reject(error),
-                    )
-                  }),
-              )
-              .finally(() => {
-                audioBufferPromiseRef.current = null
-              })
-          }
-
-          await audioBufferPromiseRef.current
+        const response = await fetch(AUDIO_SOURCE)
+        if (!response.ok) {
+          throw new Error('Failed to load audio file')
         }
 
-        setAudioEnabled(true)
+        const arrayBuffer = await response.arrayBuffer()
+        const decoded = await context.decodeAudioData(arrayBuffer.slice(0))
+        audioBufferRef.current = decoded
+        setAudioReady(true)
+        setAudioError(null)
+      })()
+        .catch((error) => {
+          console.error('Audio setup failed', error)
+          setAudioReady(false)
+          setAudioError('Unable to enable audio. Tap again to allow sound.')
+          throw error
+        })
+        .finally(() => {
+          setupPromiseRef.current = null
+        })
+    }
+
+    return setupPromiseRef.current
+  }, [])
+
+  const playSaleSound = useCallback(async () => {
+    try {
+      await ensureAudioReady()
+      const context = audioContextRef.current
+      const buffer = audioBufferRef.current
+
+      if (context && buffer) {
+        if (context.state === 'suspended') {
+          await context.resume()
+        }
+
+        const source = context.createBufferSource()
+        source.buffer = buffer
+        source.connect(context.destination)
+        source.start()
+        setAudioReady(true)
         setAudioError(null)
         return true
       }
-
-      const element = audioRef.current
-      if (element) {
-        element.muted = true
-        element.currentTime = 0
-        const maybePromise = element.play()
-
-        if (maybePromise && typeof maybePromise.then === 'function') {
-          await maybePromise.catch(() => null)
-        }
-
-        element.pause()
-        element.currentTime = 0
-        element.muted = false
-        setAudioEnabled(true)
-        setAudioError(null)
-        return true
-      }
-
-      throw new Error('No audio strategy available.')
     } catch (error) {
-      console.error('Audio setup failed', error)
-      setAudioEnabled(false)
-      setAudioError('Unable to enable audio. Tap again or check browser settings.')
-      return false
+      console.error('Primary audio playback failed', error)
     }
-  }, [])
-
-  const playCashSound = useCallback(async () => {
-    const context = audioContextRef.current
-    const buffer = audioBufferRef.current
-
-    if (context && buffer) {
-      if (context.state === 'suspended') {
-        await context.resume()
-      }
-
-      const source = context.createBufferSource()
-      source.buffer = buffer
-      source.connect(context.destination)
-      source.start()
-      return
-    }
-
-    const element = audioRef.current
-    if (!element) {
-      throw new Error('Audio element not ready.')
-    }
-
-    const temp = new Audio(element.src || AUDIO_SOURCE)
-    temp.volume = element.volume
-    temp.playbackRate = element.playbackRate
-    const playPromise = temp.play()
-    if (playPromise && typeof playPromise.then === 'function') {
-      await playPromise
-    }
-  }, [])
-
-  const triggerAudioTest = useCallback(async () => {
-    const ready = await ensureAudioSetup()
-    if (!ready) return
 
     try {
-      await playCashSound()
-      lastPlayedRef.current = Date.now()
+      const fallback = new Audio(AUDIO_SOURCE)
+      fallback.volume = 1
+      await fallback.play()
+      setAudioReady(true)
       setAudioError(null)
+      return true
     } catch (error) {
-      console.error('Audio playback failed', error)
-      setAudioError('Audio playback failed. Tap enable again or check device volume.')
+      console.error('Fallback audio playback failed', error)
+      setAudioReady(false)
+      setAudioError('Sound blocked. Tap to re-enable audio.')
+      return false
     }
-  }, [ensureAudioSetup, playCashSound])
+  }, [ensureAudioReady])
+
+  const triggerAudioTest = useCallback(async () => {
+    await playSaleSound()
+  }, [playSaleSound])
 
   const handleFrequencyChange = useCallback((event: ChangeEvent<HTMLInputElement>) => {
     const value = Number(event.target.value)
@@ -198,40 +164,6 @@ function App() {
       saleTimerRef.current = null
     }
   }, [])
-
-  const flushAudioQueue = useCallback(async () => {
-    if (isProcessingQueueRef.current) return
-    if (!saleQueueRef.current.length) return
-
-    isProcessingQueueRef.current = true
-
-    try {
-      while (saleQueueRef.current.length) {
-        const sale = saleQueueRef.current[0]
-        const ready = await ensureAudioSetup()
-        if (!ready) break
-
-        if (sale.timestamp <= lastPlayedRef.current) {
-          saleQueueRef.current.shift()
-          continue
-        }
-
-        try {
-          await playCashSound()
-          lastPlayedRef.current = sale.timestamp
-          saleQueueRef.current.shift()
-          setAudioError(null)
-        } catch (error) {
-          console.error('Automatic audio playback failed', error)
-          setAudioEnabled(false)
-          setAudioError('Sound blocked. Tap to re-enable audio.')
-          break
-        }
-      }
-    } finally {
-      isProcessingQueueRef.current = false
-    }
-  }, [ensureAudioSetup, playCashSound])
 
   const generateSale = useCallback(() => {
     let event: SaleEvent | null = null
@@ -256,14 +188,11 @@ function App() {
     if (!event) return
 
     const { productId, timestamp, amount } = event
-    setPulseMap((currentMap) => ({ ...currentMap, [productId]: timestamp }))
 
-    const nextEvent: SaleEvent = { productId, amount, timestamp }
-    saleQueueRef.current.push(nextEvent)
-    setRecentSale(nextEvent)
-    setQueueVersion((value) => value + 1)
-    void flushAudioQueue()
-  }, [flushAudioQueue])
+    setPulseMap((currentMap) => ({ ...currentMap, [productId]: timestamp }))
+    setRecentSale({ productId, amount, timestamp })
+    void playSaleSound()
+  }, [playSaleSound])
 
   const scheduleNextSale = useCallback(() => {
     clearSaleTimer()
@@ -272,10 +201,7 @@ function App() {
       return
     }
 
-    const randomDelayMs = Math.max(
-      120,
-      Math.round((-Math.log(1 - Math.random()) / salesPerSecond) * 1000),
-    )
+    const randomDelayMs = Math.max(80, Math.round((-Math.log(1 - Math.random()) / salesPerSecond) * 1000))
 
     saleTimerRef.current = window.setTimeout(() => {
       generateSale()
@@ -284,36 +210,25 @@ function App() {
   }, [clearSaleTimer, generateSale, salesPerSecond])
 
   useEffect(() => {
-    if (isAudioEnabled) return
-
     const handler = () => {
-      void ensureAudioSetup()
+      void ensureAudioReady()
     }
 
-    window.addEventListener('pointerdown', handler)
-    window.addEventListener('keydown', handler)
+    if (!isAudioReady) {
+      window.addEventListener('pointerdown', handler)
+      window.addEventListener('keydown', handler)
+    }
 
     return () => {
       window.removeEventListener('pointerdown', handler)
       window.removeEventListener('keydown', handler)
     }
-  }, [ensureAudioSetup, isAudioEnabled])
+  }, [ensureAudioReady, isAudioReady])
 
   useEffect(() => {
     const ticker = window.setInterval(() => setNow(Date.now()), 250)
     return () => window.clearInterval(ticker)
   }, [])
-
-  useEffect(() => {
-    if (!saleQueueRef.current.length) return
-    void flushAudioQueue()
-  }, [flushAudioQueue, queueVersion])
-
-  useEffect(() => {
-    if (!isAudioEnabled) return
-    if (!saleQueueRef.current.length) return
-    void flushAudioQueue()
-  }, [flushAudioQueue, isAudioEnabled])
 
   useEffect(() => {
     scheduleNextSale()
@@ -325,14 +240,14 @@ function App() {
 
   return (
     <div className="relative flex h-screen w-screen items-stretch justify-center overflow-hidden bg-gradient-to-br from-slate-950 via-slate-900 to-black px-6 pt-8 pb-12 lg:px-10 lg:pt-12 lg:pb-16">
-      {!isAudioEnabled ? (
+      {!isAudioReady ? (
         <div className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-4 bg-slate-950/80 px-10 text-center backdrop-blur-xl">
           <p className="text-sm font-semibold uppercase tracking-[0.3em] text-slate-300">
             Tap to enable audio
           </p>
           <button
             type="button"
-            onClick={() => void ensureAudioSetup()}
+            onClick={() => void ensureAudioReady()}
             className="rounded-full bg-slate-100 px-6 py-2 text-sm font-semibold text-slate-900 shadow-lg shadow-slate-950/30 transition hover:-translate-y-0.5 hover:bg-white hover:shadow-xl active:translate-y-0"
           >
             Enable Sound
@@ -357,7 +272,7 @@ function App() {
             Live Controls
           </button>
         </DialogTrigger>
-        <DialogContent className="max-w-sm -border-slate800 bg-slate-900/95 p-6 text-slate-100">
+        <DialogContent className="max-w-sm border-slate-800 bg-slate-900/95 p-6 text-slate-100">
           <DialogTitle className="text-base font-semibold uppercase tracking-[0.35em] text-slate-300">
             Control Center
           </DialogTitle>
@@ -391,7 +306,7 @@ function App() {
                 type="button"
                 onClick={() => void triggerAudioTest()}
                 className="inline-flex items-center gap-2 rounded-full bg-slate-100 px-4 py-2 text-xs font-semibold uppercase tracking-[0.25em] text-slate-900 shadow-lg shadow-slate-950/20 transition hover:-translate-y-0.5 hover:bg-white hover:shadow-xl active:translate-y-0 disabled:cursor-not-allowed disabled:bg-slate-500 disabled:text-slate-300"
-                disabled={!isAudioEnabled}
+                disabled={!isAudioReady}
               >
                 Test Sound
               </button>
@@ -409,7 +324,7 @@ function App() {
         </DialogContent>
       </Dialog>
 
-      {isAudioEnabled && audioError ? (
+      {isAudioReady && audioError ? (
         <div className="absolute bottom-20 left-1/2 -translate-x-1/2 rounded-full bg-slate-900/80 px-4 py-2 text-xs font-medium text-rose-400 shadow">
           {audioError}
         </div>
