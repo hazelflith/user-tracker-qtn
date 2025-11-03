@@ -21,7 +21,7 @@ type DashboardLayoutProps = {
 export function DashboardLayout({ products, pulseMap, now, recentSale }: DashboardLayoutProps) {
   const labels: Record<string, string> = {
     meepo: 'User subscribed',
-    kenangan: 'Gift transactions',
+    kenangan: 'User transactions',
     quantumbyte: 'User subscribed',
     nexius: 'Report generation',
   }
