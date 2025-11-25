@@ -22,7 +22,7 @@ export function DashboardLayout({ products, pulseMap, now, recentSale }: Dashboa
   const labels: Record<string, string> = {
     meepo: 'User subscribed',
     kenangan: 'User transactions',
-    quantumbyte: 'User subscribed',
+    quantumbyte: 'User signup',
     nexius: 'Report generation',
   }
 
